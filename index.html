@@ -68,13 +68,9 @@
         }
         fetch(`https://${domain}/create?url=${input.value}`).then(res => {
             if(res.ok) {
-                res.json().then(json => {
-                    result.innerHTML = json.url
-                })
+                res.json().then(json => { result.innerHTML = json.url })
             } else {
-                res.text().then(text => {
-                    result.innerHTML = text
-                })
+                res.text().then(text => { result.innerHTML = text })
             }
         }).catch(err => console.log(err))
     }
