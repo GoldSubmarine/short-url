@@ -33,11 +33,8 @@ async function handleRequest(request) {
     // create short url
     if (pathname.startsWith("/create")) {
         limitDomain(request)
-        await limitRate(request)
 
-        let originUrl = urlObj.searchParams.get("url")
-        checkUrl(originUrl)
-        const shortUrl = await createUrl(originUrl)
+        const shortUrl = await createUrl(request)
         
         return new Response(JSON.stringify({ url: shortUrl }), {
             headers: corsHeader
@@ -55,8 +52,12 @@ async function handleRequest(request) {
     throw new Error("Error request!")
 }
 
-async function createUrl(url) {
+async function createUrl(request) {
+    const urlObj = new URL(request.url)
+    const url = urlObj.searchParams.get("url")
     if(!url) throw new Error('url param not correct!!')
+
+    checkUrl(url)
 
     let existCode = await VKSTORE.get(url)
     if(existCode) return `https://${DOMAIN}/${existCode}`
@@ -64,6 +65,8 @@ async function createUrl(url) {
     let code = customAlphabet(CODE_SIZE)
     let checkExist = await KVSTORE.get(code)
     if(checkExist) throw new Error('please try again!!')
+
+    await limitRate(request)
 
     await KVSTORE.put(code, url)
     await VKSTORE.put(url, code)
@@ -130,7 +133,7 @@ async function limitRate(request) {
     if(!rate) {
         await IPLIMIT.put(ip, 1, {expirationTtl: 8*60*60})
     } else if(rate > RATE) {
-        throw new Error("Request too frequently, try again later!")
+        throw new Error(`Request too frequently, try again later! Generation is limited to ${RATE} instances per day.`)
     } else {
         await IPLIMIT.put(ip, ++rate)
     }
